@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat/constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatScreen extends StatefulWidget {
   static const String id = 'chat';
@@ -9,7 +10,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final _cloudfirestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
+  String messageText;
   User loggedinUser;
   void getCurrentuser() async {
     try {
@@ -23,6 +26,15 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void messagesStream() async {
+    await for (var snapshot
+        in _cloudfirestore.collection('messages').snapshots()) {
+      for (var message in snapshot.docs) {
+        print(message.data());
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,7 +45,8 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
               icon: Icon(Icons.close),
               onPressed: () {
-                //Implement logout functionality
+                messagesStream();
+                //_auth.signOut();
               }),
         ],
         title: Text('⚡️Chat'),
@@ -52,6 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       onChanged: (value) {
+                        messageText = value;
                         //Do something with the user input.
                       },
                       decoration: kMessageTextFieldDecoration,
@@ -59,6 +73,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   TextButton(
                     onPressed: () {
+                      _cloudfirestore.collection('messages').add({
+                        'sender': loggedinUser.email,
+                        'text': messageText,
+                      });
                       //Implement send functionality.
                     },
                     child: Text(
